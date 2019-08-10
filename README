@@ -1,0 +1,12 @@
+Do a git clone and then:
+
+docker-compose up
+
+Afterwards, navigate to:
+
+http://localhost:2015
+
+Stack
+=====
+
+caddy, tippecanoe, gdal, nix, docker
