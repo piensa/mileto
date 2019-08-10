@@ -10,6 +10,8 @@ ADD default.nix /usr/src/
 
 RUN nix-shell
 
+RUN nix-shell --run build-tiles
+
 ENTRYPOINT ["nix-shell"]
 
 EXPOSE 2015/tcp
