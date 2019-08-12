@@ -22,18 +22,26 @@ in let
        ${gdal}/bin/ogr2ogr -f GeoJSON data/ne_10m_admin_0_countries.geojson ${admin0}/ne_10m_admin_0_countries.shp;
        ${gdal}/bin/ogr2ogr -f GeoJSON data/ne_10m_admin_1_states_provinces.geojson ${admin1}/ne_10m_admin_1_states_provinces.shp;
        ${tippecanoe}/bin/tippecanoe -z3 -o data/countries-z3.mbtiles --no-progress-indicator --coalesce-densest-as-needed data/ne_10m_admin_0_countries.geojson
-       ${tippecanoe}/bin/tippecanoe -zg -Z4 -o data/states-Z4.mbtiles --no-progress-indicator --coalesce-densest-as-needed --extend-zooms-if-still-dropping data/ne_10m_admin_1_states_provinces.geojson
-       ${tippecanoe}/bin/tile-join --output-to-directory=tiles data/countries-z3.mbtiles data/states-Z4.mbtiles
+       ${tippecanoe}/bin/tippecanoe -zg -Z4 -o data/states-z4.mbtiles --no-progress-indicator --coalesce-densest-as-needed --extend-zooms-if-still-dropping data/ne_10m_admin_1_states_provinces.geojson
+       ${tippecanoe}/bin/tile-join --name=admin --output-to-directory=admin data/countries-z3.mbtiles data/states-z4.mbtiles
     '';
     
-   caddy-conf = pkgs.writeShellScriptBin "caddy-conf" ''
-
+   caddy-conf = pkgs.writeText "caddy-conf" ''
+     localhost {
+      mime .pbf application/x-protobuf
+      header /admin {
+          Content-Encoding "gzip"
+      }
+      tls off
+      bind 127.0.0.1
+      
+     }
    '';
    mileto-serve = pkgs.writeShellScriptBin "mileto-serve" ''
       caddy -conf ${caddy-conf}
    '';
    mileto-delete = pkgs.writeShellScriptBin "mileto-delete" ''
-      rm -rf tiles
+      rm -rf admin
       rm -rf data
    '';
 in pkgs.stdenv.mkDerivation rec {

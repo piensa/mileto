@@ -17,6 +17,7 @@
   <script>
   const {DOM, require} = new observablehq.Library;
   mapboxgl.accessToken = "pk.eyJ1IjoidG1jdyIsImEiOiJjamN0Z3ZiOXEwanZkMnh2dGFuemkzemE3In0.gibebYiJ5TEdXvwjpCY0jg";
+  const showNavigationControl = true;
 
   require()('@observablehq/flare')
       .then(data => {
@@ -28,16 +29,31 @@
     center: [-73.61457, 45.524149],
     zoom: 5,
     style: "mapbox://styles/mapbox/streets-v9",
-    scrollZoom: false
+    scrollZoom: showNavigationControl
+  });
+
+  map.on('load', function() {
+  map.addSource('admin', {
+      'type': 'vector',
+      "tiles": [ window.location + "/admin/{z}/{x}/{y}.pbf"],
+      "tolerance": 0
+    });
+
+  map.addLayer({
+          "id": "admin",
+          "source": "admin",
+          "source-layer": "admin",
+          "type": "fill",
+          "paint": {
+            "fill-color": "#FF0000",
+          }
+        });
   });
 
   if (showNavigationControl) {
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
   }
 
-  // Be careful to clean up the map's resources using \`map.remove()\` whenever
-  // this cell is re-evaluated.
-  invalidation.then(() => map.remove());
 }
 
       });
