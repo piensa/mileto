@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <head>
   <meta charset="utf-8">
@@ -20,43 +19,41 @@
   const showNavigationControl = true;
 
   require()('@observablehq/flare')
-      .then(data => {
-	      {
-  // Create the \`map\` object with the mapboxgl.Map constructor, referencing
-  // the container div
-  let map = new mapboxgl.Map({
-    container: "map",
-    center: [-73.61457, 45.524149],
-    zoom: 5,
-    style: "mapbox://styles/mapbox/streets-v9",
-    scrollZoom: showNavigationControl
+    .then(data => {
+      {
+       let map = new mapboxgl.Map({
+         container: "map",
+         center: [-73.61457, 45.524149],
+         zoom: 5,
+         style: "mapbox://styles/mapbox/streets-v9",
+         scrollZoom: showNavigationControl
+       });
+
+       map.on('load', function() {
+         map.addSource('admin', {
+           'type': 'vector',
+            "tiles": [ window.location + "admin/{z}/{x}/{y}.pbf"],
+            "tolerance": 0
+          });
+
+         map.addLayer({
+           "id": "admin",
+           "source": "admin",
+           "source-layer": "admin",
+           "type": "fill",
+           "paint": {
+             "fill-color": "#FF0000",
+           }
+         });
+       });
+       map.on('error', e => {
+         console.log(e.error);
+       });
+
+       if (showNavigationControl) {
+          map.addControl(new mapboxgl.NavigationControl(), "top-right");
+       }
+     }
   });
-
-  map.on('load', function() {
-  map.addSource('admin', {
-      'type': 'vector',
-      "tiles": [ window.location + "/admin/{z}/{x}/{y}.pbf"],
-      "tolerance": 0
-    });
-
-  map.addLayer({
-          "id": "admin",
-          "source": "admin",
-          "source-layer": "admin",
-          "type": "fill",
-          "paint": {
-            "fill-color": "#FF0000",
-          }
-        });
-  });
-
-  if (showNavigationControl) {
-    map.addControl(new mapboxgl.NavigationControl(), "top-right");
-  }
-
-}
-
-      });
   </script>
 </body>
-

@@ -18,31 +18,53 @@ in let
     caddy = pkgs.caddy;
 in let
     mileto-generate = pkgs.writeShellScriptBin "mileto-generate" ''
-       mkdir -p data
-       ${gdal}/bin/ogr2ogr -f GeoJSON data/ne_10m_admin_0_countries.geojson ${admin0}/ne_10m_admin_0_countries.shp;
-       ${gdal}/bin/ogr2ogr -f GeoJSON data/ne_10m_admin_1_states_provinces.geojson ${admin1}/ne_10m_admin_1_states_provinces.shp;
-       ${tippecanoe}/bin/tippecanoe -z3 -o data/countries-z3.mbtiles --no-progress-indicator --coalesce-densest-as-needed data/ne_10m_admin_0_countries.geojson
-       ${tippecanoe}/bin/tippecanoe -zg -Z4 -o data/states-z4.mbtiles --no-progress-indicator --coalesce-densest-as-needed --extend-zooms-if-still-dropping data/ne_10m_admin_1_states_provinces.geojson
-       ${tippecanoe}/bin/tile-join --name=admin --output-to-directory=admin data/countries-z3.mbtiles data/states-z4.mbtiles
+       mkdir -p build
+       ${gdal}/bin/ogr2ogr -f GeoJSON build/ne_10m_admin_0_countries.geojson ${admin0}/ne_10m_admin_0_countries.shp;
+       ${gdal}/bin/ogr2ogr -f GeoJSON build/ne_10m_admin_1_states_provinces.geojson ${admin1}/ne_10m_admin_1_states_provinces.shp;
+       ${tippecanoe}/bin/tippecanoe -z3 -o build/countries-z3.mbtiles --no-progress-indicator --coalesce-densest-as-needed build/ne_10m_admin_0_countries.geojson
+       ${tippecanoe}/bin/tippecanoe -zg -Z4 -o build/states-z4.mbtiles --no-progress-indicator --coalesce-densest-as-needed --extend-zooms-if-still-dropping build/ne_10m_admin_1_states_provinces.geojson
+       ${tippecanoe}/bin/tile-join --name=admin --output-to-directory=admin build/countries-z3.mbtiles build/states-z4.mbtiles
     '';
     
    caddy-conf = pkgs.writeText "caddy-conf" ''
      localhost {
-      mime .pbf application/x-protobuf
-      header /admin {
-          Content-Encoding "gzip"
-      }
-      tls off
-      bind 127.0.0.1
-      
+       tls off
+       bind 127.0.0.1
+       request_id 
+       mime .pbf application/x-protobuf
+
+       cors /admin https://fresco.gospatial.org
+
+       header /  Caddy-Request-Id {request_id}
+ 
+       header /admin/ {
+         Content-Encoding "gzip"
+         Access-Control-Allow-Origin *
+       }
+ 
+       header /admin/metadata.json {
+         -Content-Encoding
+       }
+     }
+   '';
+   server.go = pkgs.writeText "server.go" ''
+     package main
+     import (
+       "github.com/caddyserver/caddy/caddy/caddymain"
+       _ "github.com/captncraig/cors/caddy"
+     )
+
+     func main() {
+       caddymain.EnableTelemetry = false
+       caddymain.Run()
      }
    '';
    mileto-serve = pkgs.writeShellScriptBin "mileto-serve" ''
-      caddy -conf ${caddy-conf}
+      go run ${server.go} -conf ${caddy-conf}
    '';
    mileto-delete = pkgs.writeShellScriptBin "mileto-delete" ''
       rm -rf admin
-      rm -rf data
+      rm -rf build
    '';
 in pkgs.stdenv.mkDerivation rec {
   name = "mileto";
@@ -50,6 +72,8 @@ in pkgs.stdenv.mkDerivation rec {
   buildInputs = [
     pkgs.bash
     pkgs.caddy
+    pkgs.nodejs
+    pkgs.go_1_12
     mileto-generate
     mileto-serve
     mileto-delete
@@ -59,6 +83,8 @@ in pkgs.stdenv.mkDerivation rec {
   '';
 
   shellHooks = ''
+   export GOPATH="/tmp/go"
+   export GO111MODULE=on
  '';
 }
 
